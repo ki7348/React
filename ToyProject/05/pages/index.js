@@ -1,32 +1,48 @@
-import { useEffect, useState } from 'react'
-import MeetupList from '../components/meetups/MeetupList'
+import { MongoClient } from 'mongodb';
 
-const DUMMY_MEETUPS = [
-    {
-        id: 'm1',
-        title: 'A First Meetup',
-        image: 'https://image.ajunews.com/content/image/2020/10/18/20201018211753966706.jpg',
-        address: 'Some address 5, 12345 Some City',
-        description: 'This is a first meetup!'
-    },
-    {
-        id: 'm2',
-        title: 'A Second Meetup',
-        image: 'https://image.ajunews.com/content/image/2020/10/18/20201018211753966706.jpg',
-        address: 'Some address 10, 12345 Some City',
-        description: 'This is a second meetup!'
-    }
-]
+import MeetupList from '../components/meetups/MeetupList';
 
-function HomePage() {
-    const [loadedMeetups, setLoadedMeetups] = useState([])
-    
-    useEffect(()=>{
-        setLoadedMeetups(DUMMY_MEETUPS)
-    },[])
-
-    return <MeetupList meetups={loadedMeetups}/>
- 
+function HomePage(props) {
+  return <MeetupList meetups={props.meetups} />;
 }
 
-export default HomePage
+// export async function getServerSideProps(context) {
+//   const req = context.req;
+//   const res = context.res;
+
+//   // fetch data from an API
+
+//   return {
+//     props: {
+//       meetups: DUMMY_MEETUPS
+//     }
+//   };
+// }
+
+export async function getStaticProps() {
+  // fetch data from an API
+  const client = await MongoClient.connect(
+    'mongodb+srv://sad:ehdrlsean97@cluster0.lblgl.mongodb.net/meetups?retryWrites=true&w=majority'
+  );
+  const db = client.db();
+
+  const meetupsCollection = db.collection('meetups');
+
+  const meetups = await meetupsCollection.find().toArray();
+
+  client.close();
+
+  return {
+    props: {
+      meetups: meetups.map((meetup) => ({
+        title: meetup.title,
+        address: meetup.address,
+        image: meetup.image,
+        id: meetup._id.toString(),
+      })),
+    },
+    revalidate: 1,
+  };
+}
+
+export default HomePage;
